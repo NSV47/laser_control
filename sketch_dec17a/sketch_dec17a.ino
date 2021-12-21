@@ -41,7 +41,7 @@ uint8_t portCool = 7;
 // 11 12 16 21
 
 uint8_t portAlarmPin11 = 8;
-uint8_t portAlarmPin12 = 9;
+//uint8_t portAlarmPin12 = 9;
 //uint8_t portAlarmPin16 = 10;
 //uint8_t portAlarmPin21 = 11;
 
@@ -72,6 +72,11 @@ const uint8_t pinTX = 4;
 uint8_t powerLaser = 10;
 uint8_t frequencyLaser = 30;
 uint32_t durationOfActivationLaser = 1000; 
+
+static uint32_t reqfreq=30000; //переменная запроса частоты
+
+uint32_t timer_pin_2 = 0;
+bool state_pin_2 = LOW;
 
 void ethernet_control(){
 	int size = udp.parsePacket(); // считываем размер принятого пакета
@@ -120,7 +125,12 @@ void ethernet_control(){
 			if(memcmp(&receivingBuffer[i],"n0" , 2)==0){ // Если в строке str начиная с символа i находится текст "movingUp",  значит кнопка дисплея была включена
 				i+=1; 
 				
-				powerLaser = receivingBuffer[i-3];
+				//powerLaser = receivingBuffer[i-3];
+				uint16_t temp =atoi(&receivingBuffer[2]); //переменная запроса частоты
+				reqfreq = temp*1000;
+				Serial.print(F("reqfreq: "));
+				Serial.println(reqfreq);
+				//Serial.println(receivingBuffer[2]);
 				Serial.print(F("powerLaser: "));
 				Serial.println(powerLaser);
 			}else 
@@ -295,11 +305,17 @@ void setup() {
   pinMode(portCool, OUTPUT);
   
   pinMode(portAlarmPin11, INPUT_PULLUP);
-  pinMode(portAlarmPin12, INPUT_PULLUP);
+  //pinMode(portAlarmPin12, INPUT_PULLUP);
   //pinMode(portAlarmPin16, INPUT_PULLUP);
   //pinMode(portAlarmPin21, INPUT_PULLUP);
   
   Serial.begin(9600);
+  
+  pinMode (9,OUTPUT); // выход генератора
+  pinMode (2,OUTPUT); 
+	TCCR1A=0;TCCR1B=0;
+	
+	
 }
  
 void loop() {
@@ -351,6 +367,7 @@ void loop() {
   
   // собираем данные из UART в пакет
 	if( Serial.available() > 0 ) {
+		//reqfreq = Serial.parseInt();
 		byte i = 0;
 		while(Serial.available()){
 			transmitBuffer[i++] = Serial.read();
@@ -374,4 +391,32 @@ void loop() {
 		//if(i >= 100) i=0;
 	  //}
 	}
+	
+	
+	uint32_t ocr=OCR1A;  uint16_t divider=1;  float freq; 
+	//reqfreq = Serial.parseInt(); 
+if (reqfreq==0 || reqfreq>F_CPU/2) {return;}
+ ocr = (F_CPU / reqfreq /2 /divider); 
+  byte shifts[] = {3,3,2,2};
+   for(byte i = 0; i < 4; i++){
+     if (ocr > 65536) { divider <<= shifts[i];
+       ocr = F_CPU / reqfreq /2 /divider; }
+      else { TCCR1B = (i+1)|(1<<WGM12);  break; }  } //Mode4 (CTC)
+     OCR1A=ocr-1; TCCR1A=1<<COM1A0;
+    freq= (float) F_CPU/2 / (OCR1A+1) /divider;
+  if (freq <10000) { 
+	//Serial.print(freq,1);
+	//Serial.println(" Hz "); 
+	}
+ if (freq >=10000) { 
+	//Serial.print(freq/1000,3);
+	//Serial.println(" kHz");
+}
+
+	if(millis()-timer_pin_2>=500){
+		state_pin_2 = !state_pin_2;
+		digitalWrite(2, state_pin_2);
+		timer_pin_2 = millis();
+	}
+
 }
