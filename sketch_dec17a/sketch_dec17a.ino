@@ -4,14 +4,24 @@
 * nsv47nsv36@yandex.ru
 * программа для управления лазерным источником типа Raycus RFL-P30Q
 * необходимо установить 
+* 21.12.21
+* /*
+ * создано 13.12.21
+ * За основу взят материал из папки ENC28j60 на Yandex.Disc
+ * не получалось поддключить плату ENC28j60 пока не запитал ее от 5 вольт.
+ * тестировалось с tcp/ip builder. Данные в обе стороны, но при отправке из UART не чистится буфер?
+ * занимает много места. Удалить лишний код из библиотеки.
+ * при отправке из tcp/ip builder единицы поднимается вторая ножка, при отправке 0 отпускается.
+ * не работает чтение принятых данных.
 */
+
 
 #include <SPI.h>
 #include <UIPEthernet.h>
 
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 
-#define SERV_PORT 2000 // порт сервера
+#define SERV_PORT 51000 // порт сервера
 
 //18296 1412
 
@@ -32,8 +42,8 @@ uint8_t portCool = 7;
 
 uint8_t portAlarmPin11 = 8;
 uint8_t portAlarmPin12 = 9;
-uint8_t portAlarmPin16 = 10;
-uint8_t portAlarmPin21 = 11;
+//uint8_t portAlarmPin16 = 10;
+//uint8_t portAlarmPin21 = 11;
 
 unsigned long timerSwitchWhile = 0;
 unsigned long previousMillis_1 = 0;
@@ -47,15 +57,17 @@ bool statePortCool = false;
  
 // определяем конфигурацию сети
 byte mac[] = {0xAE, 0xB2, 0x26, 0xE4, 0x4A, 0x5C}; // MAC-адрес
-byte ip[] = {192, 168, 1, 100}; // IP-адрес
+byte ip[] = {192, 168, 1, 10}; // IP-адрес
+byte ipServ[] = {192, 168, 1, 2}; // IP-адрес сервера
 
 char receivingBuffer[100]; // приемный буфер Udp-пакета
+char transmitBuffer[100];
 EthernetUDP udp; // создаем экземпляр Udp
 
 const uint8_t pinRX = 5;
 const uint8_t pinTX = 4;
 
-SoftwareSerial softSerial(pinRX,pinTX);
+//SoftwareSerial softSerial(pinRX,pinTX);
 
 uint8_t powerLaser = 10;
 uint8_t frequencyLaser = 30;
@@ -67,6 +79,21 @@ void ethernet_control(){
   if (size) {
     // есть новый пакет
     udp.read(receivingBuffer, size); // чтение Udp-пакета
+	
+	 // есть пакет Udp, выводим информацию о пакете
+	  Serial.print("Received packet from ");
+	  IPAddress ipFrom = udp.remoteIP();
+	  Serial.println(ipFrom);
+	  Serial.print("Size ");
+	  Serial.print(size);
+	  Serial.print(", port ");
+	  Serial.println(udp.remotePort());
+	
+	//-----Отправляю в ответ время----------------------
+	udp.beginPacket(udp.remoteIP(), udp.remotePort());
+    udp.println(millis());
+    udp.endPacket();
+	//--------------------------------------------------
 	
 	/*
     // управление светодиодом
@@ -107,7 +134,7 @@ void ethernet_control(){
 	}
   }
 }
-
+/*
 void controlFromTheDisplay(){
 	if(softSerial.available()>0){         // Если есть данные принятые от дисплея, то ...
 		
@@ -180,7 +207,9 @@ void controlFromTheDisplay(){
 			}
 		}
 	}
-}	
+}
+*/
+	
 // 63488 красный
 // 2024 зеленый
 // softSerial.print((String)"t0.txt=\""+analogRead(pinR)+"\""+char(255)+char(255)+char(255));
@@ -192,6 +221,8 @@ void controlFromTheDisplay(){
 // 101
 // 110
 // 111
+
+/*
 void setIndicationAlarm(uint8_t alarm){
 	if(alarm==0){
 		softSerial.print((String)"r0.pco=63488"+char(255)+char(255)+char(255));
@@ -226,7 +257,9 @@ void setIndicationAlarm(uint8_t alarm){
 		softSerial.print((String)"t3.txt=\"reserve\""+char(255)+char(255)+char(255));
 	}
 }
+*/
 
+/*
 void alarm_signal(){
 	char statePortAlarmPin11 = digitalRead(portAlarmPin11);
 	char statePortAlarmPin12 = digitalRead(portAlarmPin12);
@@ -246,6 +279,7 @@ void alarm_signal(){
 		case 111: setIndicationAlarm(111); break;
 	}
 }
+*/
 
 void setup() {
   //устанавливаем режим порта выхода
@@ -262,12 +296,15 @@ void setup() {
   
   pinMode(portAlarmPin11, INPUT_PULLUP);
   pinMode(portAlarmPin12, INPUT_PULLUP);
-  pinMode(portAlarmPin16, INPUT_PULLUP);
-  pinMode(portAlarmPin21, INPUT_PULLUP);
+  //pinMode(portAlarmPin16, INPUT_PULLUP);
+  //pinMode(portAlarmPin21, INPUT_PULLUP);
+  
+  Serial.begin(9600);
 }
  
 void loop() {
 
+/*
   for (int j = 0; j < 256; j++) {
     //устанавливаем LOW на latchPin пока не окончена передача байта
     digitalWrite(latchPin, LOW);
@@ -276,6 +313,7 @@ void loop() {
     digitalWrite(latchPin, HIGH);
     delay(1000);
   }
+*/
   
   if(previousMillis_1>=4294967295){
     previousMillis_1 = 0;
@@ -284,14 +322,16 @@ void loop() {
     previousMillis_2 = 0;
   }
   
-  int size = udp.parsePacket(); // считываем размер принятого пакета
-  
+  //int size = udp.parsePacket(); // считываем размер принятого пакета
+  /*
   if (size) {
     // есть новый пакет
     udp.read(receivingBuffer, size); // чтение Udp-пакета
   }
+  */
   
-  controlFromTheDisplay();
+  //controlFromTheDisplay();
+  ethernet_control();
   
   if(timerSwitchWhile<=0){
 	statePortEmission = false;
@@ -305,7 +345,33 @@ void loop() {
   }
   
   if(millis()-previousMillis_2 >= 1000){
-	alarm_signal();
+	//alarm_signal();
 	previousMillis_2 = millis();
   }
+  
+  // собираем данные из UART в пакет
+	if( Serial.available() > 0 ) {
+		byte i = 0;
+		while(Serial.available()){
+			transmitBuffer[i++] = Serial.read();
+		}
+	  
+	  //if( transmitBuffer[i] == 10 ) {
+		//transmitBuffer[i+1]= 0;
+		//i=0;
+		// передача UDP пакета
+		udp.beginPacket(ipServ, SERV_PORT);
+		udp.write(transmitBuffer);
+		udp.endPacket();
+		// сообщение в последовательный порт
+		Serial.print("UDP-packet transmission to ");
+		Serial.print(udp.remoteIP());
+		Serial.print(" Port: ");
+		Serial.println(udp.remotePort());
+	 // }
+	  //else {
+		//i++;
+		//if(i >= 100) i=0;
+	  //}
+	}
 }
