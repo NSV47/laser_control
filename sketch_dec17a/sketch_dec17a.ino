@@ -100,17 +100,17 @@ void setting_the_pump_level_code(){
 	//for (int j = 0; j < 256; j++) {
     //устанавливаем LOW на latchPin пока не окончена передача байта
     digitalWrite(latchPin, LOW);
-    shiftOut(dataPin, clockPin, LSBFIRST, powerLaser);  
+    shiftOut(dataPin, clockPin, MSBFIRST, powerLaser);  
     //устанавливаем HIGH на latchPin, чтобы проинформировать регистр, что передача окончена.
     digitalWrite(latchPin, HIGH);
     delay(10);
-	digitalWrite(portLatch_9, !statePortLatch_9);
+	digitalWrite(portLatch_9, HIGH);
 	delay(10);
-	digitalWrite(portLatch_9, statePortLatch_9);
+	digitalWrite(portLatch_9, LOW);
 }
 
 void turning_on_the_radiation(){
-	setting_the_pump_level_code();
+	//setting_the_pump_level_code();
 	
 	digitalWrite(portEnableEmission_18, HIGH);
 	delay(10);
@@ -193,8 +193,11 @@ void controlFromTheDisplay_debug(){
 				i+=5; 
 				
 				powerLaser = cmd[i-3];
+				//val = map(val, 0, 1023, 0, 255);
+				powerLaser = map(powerLaser, 0, 100, 0, 255);
 				Serial.print(F("powerLaser: "));
 				Serial.println(powerLaser);
+				setting_the_pump_level_code();
 			}else 
 			if(memcmp(&cmd[i],"n1", 2)==0){
 				i+=5; 
