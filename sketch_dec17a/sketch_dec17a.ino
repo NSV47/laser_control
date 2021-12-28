@@ -103,9 +103,9 @@ void setting_the_pump_level_code(){
     shiftOut(dataPin, clockPin, MSBFIRST, powerLaser);  
     //устанавливаем HIGH на latchPin, чтобы проинформировать регистр, что передача окончена.
     digitalWrite(latchPin, HIGH);
-    delay(10);
+    delay(1);
 	digitalWrite(portLatch_9, HIGH);
-	delay(10);
+	delay(1);
 	digitalWrite(portLatch_9, LOW);
 }
 
@@ -420,7 +420,8 @@ void setup() {
   
   //Ethernet.begin(mac, ip); // инициализируем контроллер
   //udp.begin(SERV_PORT); // включаем прослушивание порта
-  
+  //portLatch_9
+  pinMode(portLatch_9, OUTPUT);
   pinMode(portEnableEmission_18, OUTPUT);
   pinMode(portEnableModulation_19, OUTPUT);
   pinMode(portPulseRepetitiveRateSignal_20, OUTPUT); // выход генератора
